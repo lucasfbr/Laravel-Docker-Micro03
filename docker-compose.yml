@@ -1,0 +1,54 @@
+services:
+    app_mail:
+        build: 
+          args: 
+              user: 'lucas-borges'
+              uid: 1000 
+          dockerfile: Dockerfile 
+        container_name: app_mail
+        extra_hosts:
+          - "host.docker.internal:host-gateway"
+        volumes:
+          - .:/var/www
+        networks:
+          - micromail
+        depends_on:
+          - redis_mail
+          - queue_mail
+
+    nginx_mail:
+        build: .docker/nginx
+        container_name: nginx_mail
+        restart: always
+        tty: true
+        ports:
+          - "8005:80"
+        volumes:
+          - .:/var/www
+        networks:
+          - micromail
+        depends_on:
+          - app_mail
+    
+    queue_mail:
+        build: 
+            args: 
+                user: 'lucas-borges'
+                uid: 1000
+            dockerfile: Dockerfile
+        container_name: queue_mail    
+        command: 'php artisan queue:work'
+        restart: unless-stopped
+        volumes: 
+            - .:/var/www
+        networks: 
+            - micromail
+
+    redis_mail:
+        image: redis:latest
+        networks: 
+            - micromail
+
+networks:
+    micromail:
+        driver: bridge
